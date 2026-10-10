@@ -1,4 +1,6 @@
 .env
 node_modules/
 *.log
+.env*
+!.env.example
 backups/

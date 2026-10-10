@@ -1,0 +1,11 @@
+{
+  "name": "Quỹ CLB Cờ vua HCMUS",
+  "logo": "/logo.svg",
+  "primaryColor": "#2457d6",
+  "radius": "0.75rem",
+  "texts": {
+    "loginTitle": "Đăng nhập",
+    "loginHint": "Nhập email đã đăng ký với CLB",
+    "paidMessage": "Cảm ơn bạn đã đóng quỹ!"
+  }
+}

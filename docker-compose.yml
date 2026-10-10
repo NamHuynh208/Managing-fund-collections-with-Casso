@@ -25,17 +25,23 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:8000:8000"
     volumes:
-      - ./backend/src:/app/src      # sửa code là tự cập nhật khi phát triển
-    command: node --watch src/index.js
-
+      - ./backend:/app          # sửa code khi phát triển
+    command: python manage.py runserver 0.0.0.0:8000   # dev; production dùng gunicorn
   mailpit:
     image: axllent/mailpit
     restart: unless-stopped
     ports:
       - "127.0.0.1:8025:8025"   # giao diện xem email thử
       - "127.0.0.1:1025:1025"   # cổng SMTP giả
-
+  poller:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "while true; do python manage.py poll_bank_emails; sleep 60; done"
 volumes:
   pgdata:
