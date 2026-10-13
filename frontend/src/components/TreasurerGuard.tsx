@@ -8,6 +8,12 @@ export default function TreasurerGuard() {
     queryFn: () => api<{ role: string }>("/me"),
     retry: false,
   });
+  const { data: reg } = useQuery({
+  queryKey: ["registrations"],
+  queryFn: () => api<{ pending: number }>("/treasurer/registrations"),
+  refetchInterval: 60_000,
+  retry: false,
+});
 
   if (isLoading) return <p className="p-4">Đang tải…</p>;
   if (error) return <Navigate to="/login" replace />;
@@ -22,6 +28,10 @@ export default function TreasurerGuard() {
         <NavLink to="/" className={link}>← Trang của tôi</NavLink>
         <NavLink to="/thu-quy" end className={link}>Kỳ thu</NavLink>
         <NavLink to="/thu-quy/giao-dich" className={link}>Giao dịch</NavLink>
+        <NavLink to="/thu-quy/dang-ky" className={link}>
+          Đơn đăng ký{reg && reg.pending > 0 ? ` (${reg.pending})` : ""}
+        </NavLink>
+        <NavLink to="/thu-quy/chuyen-di" className={link}>Chuyển đi</NavLink>
       </nav>
       <Outlet />
     </div>

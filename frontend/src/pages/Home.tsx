@@ -27,10 +27,7 @@ export default function Home() {
         <button onClick={logout} className="underline">Đăng xuất</button>
       </div>
 
-      <div className="border rounded p-3" style={{ background: "var(--card)" }}>
-        <b>Quỹ hiện có: {vnd(data.summary.balance)}</b><br />
-        <small>Đã thu {vnd(data.summary.collected)} · Đã chi {vnd(data.summary.spent)}</small>
-      </div>
+
 
       <h2 className="text-xl font-semibold">Cần đóng</h2>
       {pending.length === 0 && <p className="text-green-700">Bạn không có khoản nào cần đóng.</p>}

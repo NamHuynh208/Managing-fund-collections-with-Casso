@@ -22,9 +22,12 @@ default="django-insecure-dev-only-change-this",
 DEBUG = env.bool("DEBUG", default=True)
 
 ALLOWED_HOSTS = env.list(
-"ALLOWED_HOSTS",
-default=["localhost", "127.0.0.1"],
+    "ALLOWED_HOSTS",
+    default=env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"]),
 )
+
+
+
 
 
 
@@ -153,6 +156,10 @@ CSRF_TRUSTED_ORIGINS = env.list(
 default=["http://localhost:5173"],
 )
 
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SECURE = env.bool("COOKIE_SECURE", default=False)
+CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+
 FRONTEND_URL = env(
 "FRONTEND_URL",
 default="http://localhost:5173",
@@ -242,3 +249,5 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = env("EMAIL_HOST", default="mailpit")
 EMAIL_PORT = env.int("EMAIL_PORT", default=1025)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="quy@localhost")
+
+CASSO_SECURE_KEY = env("CASSO_SECURE_KEY", default="")

@@ -8,6 +8,7 @@ from ninja import Field, Router, Schema
 from ninja.errors import HttpError
 from ninja.security import SessionAuth
 
+from apps.accounts.models import User
 from apps.funds.audit import log as audit
 from apps.funds.models import FeePeriod, Invoice
 from apps.funds.services import create_period, fund_summary
@@ -31,6 +32,7 @@ class PeriodIn(Schema):
     name: str = Field(..., min_length=1, max_length=120)
     amount: int = Field(..., gt=0)
     due_date: date
+    member_ids: list[int] | None = None      # None = tất cả thành viên
 
 
 class AssignIn(Schema):
@@ -46,20 +48,37 @@ def overview(request):
     }
 
 
+@router.get("/members")
+def members(request):
+    qs = User.objects.filter(is_active=True).order_by("full_name")
+    return {"members": [{"id": u.id, "full_name": u.full_name, "email": u.email} for u in qs]}
+
+
 @router.get("/periods")
 def periods(request):
     qs = FeePeriod.objects.annotate(
         total=Count("invoices"),
         paid=Count("invoices", filter=Q(invoices__status=Invoice.Status.PAID)),
     ).order_by("-due_date")
-    return [{"id": p.id, "name": p.name, "amount": p.amount, "due_date": p.due_date,
-             "total": p.total, "paid": p.paid} for p in qs]
+    return {
+        "periods": [{"id": p.id, "name": p.name, "amount": p.amount, "due_date": p.due_date,
+                     "total": p.total, "paid": p.paid} for p in qs],
+        "summary": fund_summary(),
+    }
 
 
 @router.post("/periods")
 def new_period(request, data: PeriodIn):
-    p = create_period(data.name.strip(), data.amount, data.due_date)
-    audit(request.user, "period.create", f"period={p.pk}")
+    ids = None
+    if data.member_ids is not None:
+        ids = list(set(data.member_ids))
+        if not ids:
+            raise HttpError(400, "Chưa chọn thành viên nào")
+        if User.objects.filter(is_active=True, pk__in=ids).count() != len(ids):
+            raise HttpError(400, "Có thành viên không hợp lệ")
+    p = create_period(data.name.strip(), data.amount, data.due_date, ids)
+    audit(request.user, "period.create",
+          f"period={p.pk} members={'all' if ids is None else len(ids)}")
     return {"id": p.id}
 
 

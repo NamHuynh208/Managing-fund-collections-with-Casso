@@ -1,198 +1,144 @@
 @import "tailwindcss";
 
+
+
 :root {
-/* Colors */
---text: #6b6375;
---text-h: #08060d;
---bg: #f6f7f9;
---card: #ffffff;
---border: #e5e4e7;
+  /* Colors: nền trắng, chữ đen */
+  --text: #000000;
+  --text-h: #000000;
+  --bg: #ffffff;
+  --card: #ffffff;
+  --border: #d4d4d4;
 
-/* App theme */
---primary: #2457d6;
---radius: 0.75rem;
+  /* App theme */
+  --primary: #000000;
+  --radius: 0.75rem;
 
-/* Accent */
---accent: #aa3bff;
---accent-bg: rgba(170, 59, 255, 0.1);
---accent-border: rgba(170, 59, 255, 0.5);
+  /* Other */
+  --code-bg: #f4f4f4;
+  --shadow: none;
 
-/* Other */
---code-bg: #f4f3ec;
---social-bg: rgba(244, 243, 236, 0.5);
+  /* Fonts */
+  --sans: system-ui, "Segoe UI", Roboto, serif;
+  --heading: system-ui, "Segoe UI", Roboto, serif;
+  --mono: ui-monospace, Consolas, monospace;
 
---shadow:
-rgba(0, 0, 0, 0.1) 0 10px 15px -3px,
-rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-/* Fonts */
---sans: system-ui, "Segoe UI", Roboto, sans-serif;
---heading: system-ui, "Segoe UI", Roboto, sans-serif;
---mono: ui-monospace, Consolas, monospace;
-
-/* Base */
-font: 18px/145% var(--sans);
-letter-spacing: 0.18px;
-color-scheme: light dark;
-color: var(--text);
-background: var(--bg);
-font-synthesis: none;
-text-rendering: optimizeLegibility;
--webkit-font-smoothing: antialiased;
--moz-osx-font-smoothing: grayscale;
+  /* Base */
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 @media (max-width: 1024px) {
-font-size: 16px;
-}
-}
-
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-:root {
---text: #9ca3af;
---text-h: #f3f4f6;
---bg: #16171d;
---card: #1d2026;
---border: #2e303a;
-
---primary: #6d8ff0;
-
---code-bg: #1f2028;
---accent: #c084fc;
---accent-bg: rgba(192, 132, 252, 0.15);
---accent-border: rgba(192, 132, 252, 0.5);
---social-bg: rgba(47, 48, 58, 0.5);
-
---shadow:
-  rgba(0, 0, 0, 0.4) 0 10px 15px -3px,
-  rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-
-
-}
-
-#social .button-icon {
-filter: invert(1) brightness(2);
-}
+  :root {
+    font-size: 16px;
+  }
 }
 
 /* Global */
-
-{
-box-sizing: border-box;
+* {
+  box-sizing: border-box;
 }
 
 html {
-min-height: 100%;
+  min-height: 100%;
 }
 
 body {
-margin: 0;
-min-width: 320px;
-min-height: 100vh;
-background: var(--bg);
-color: var(--text);
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
 }
 
 /* React root */
 #root {
-width: 1126px;
-max-width: 100%;
-min-height: 100svh;
-margin: 0 auto;
+  width: 1126px;
+  max-width: 100%;
+  min-height: 100svh;
+  margin: 0 auto;
+  text-align: center;
+  border-inline: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
 
-text-align: center;
-
-border-inline: 1px solid var(--border);
-
-display: flex;
-flex-direction: column;
+@media (max-width: 768px) {
+  #root {
+    width: 100%;
+    border-inline: none;
+  }
 }
 
 /* Headings */
 h1,
 h2 {
-font-family: var(--heading);
-font-weight: 500;
-color: var(--text-h);
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
 }
 
 h1 {
-font-size: 56px;
-letter-spacing: -1.68px;
-margin: 32px 0;
-
-@media (max-width: 1024px) {
-font-size: 36px;
-margin: 20px 0;
-}
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
 }
 
 h2 {
-font-size: 24px;
-line-height: 118%;
-letter-spacing: -0.24px;
-margin: 0 0 8px;
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+}
 
 @media (max-width: 1024px) {
-font-size: 20px;
-}
+  h1 {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+  h2 {
+    font-size: 20px;
+  }
 }
 
-/* Paragraph */
 p {
-margin: 0;
+  margin: 0;
 }
 
-/* Links */
+/* Links: đen, gạch chân để vẫn nhận ra là liên kết */
 a {
-color: var(--primary);
-text-decoration: none;
-}
-
-a:hover {
-text-decoration: underline;
-}
-
-/* Code */
-code,
-.counter {
-font-family: var(--mono);
-display: inline-flex;
-border-radius: 4px;
-color: var(--text-h);
+  color: var(--primary);
+  text-decoration: underline;
 }
 
 code {
-font-size: 15px;
-line-height: 135%;
-padding: 4px 8px;
-background: var(--code-bg);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--text-h);
+  background: var(--code-bg);
 }
 
 /* Cards */
 .card {
-background: var(--card);
-border: 1px solid var(--border);
-border-radius: var(--radius);
-box-shadow: var(--shadow);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
-/* Buttons */
-button {
-font-family: inherit;
-}
-
-/* Form controls */
+button,
 input,
 textarea,
 select {
-font-family: inherit;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-#root {
-width: 100%;
-border-inline: none;
-}
+  font-family: inherit;
 }

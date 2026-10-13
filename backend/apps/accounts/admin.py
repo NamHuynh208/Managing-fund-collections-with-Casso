@@ -30,3 +30,10 @@ class MemberAdmin(UserAdmin):
         ("Quyền admin", {"fields": ("is_staff", "is_superuser")}),
     )
     add_fieldsets = ((None, {"fields": ("email", "full_name", "role")}),)
+
+from .models import RegistrationRequest
+
+@admin.register(RegistrationRequest)
+class RegistrationRequestAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "full_name", "email", "status")
+    list_filter = ("status",)

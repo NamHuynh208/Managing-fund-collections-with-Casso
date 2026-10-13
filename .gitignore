@@ -1,6 +1,28 @@
+# Bí mật, tuyệt đối không đưa lên GitHub
 .env
-node_modules/
-*.log
-.env*
+.env.*
 !.env.example
+
+# Dữ liệu và bản sao lưu (chứa dữ liệu thành viên và tiền)
 backups/
+*.dump
+*.sql.gz
+db.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+staticfiles/
+
+# Node
+node_modules/
+node_modules_*/
+frontend/dist/
+.vite/
+
+# Khác
+*.bak
+*.sai
+*.log
+.vscode/
+Thumbs.db

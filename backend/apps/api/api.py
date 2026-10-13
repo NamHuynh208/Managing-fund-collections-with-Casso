@@ -37,26 +37,23 @@ def need_treasurer(request):
 # ---------- Schemas ----------
 class EmailIn(Schema):
     email: str
+    portal: str = "member"
 
 class TokenIn(Schema):
     token: str
+    portal: str = "member"
 
 class CodeIn(Schema):
     email: str
     code: str
+    portal: str = "member"
 
-class PeriodIn(Schema):
-    name: str
-    amount: int
-    due_date: date
-
+ 
 class ExpenseIn(Schema):
     amount: int
     reason: str
     spent_at: date
 
-class AssignIn(Schema):
-    invoice_id: int
 
 
 # ---------- Công khai ----------
@@ -73,26 +70,29 @@ def csrf(request):
 @api.post("/auth/request", auth=None)
 def auth_request(request, data: EmailIn):
     if not acc.hit_limit(f"login-ip:{acc.client_ip(request)}", 10, 600):
-        acc.issue_login(data.email, request)
+        acc.issue_login(data.email, request, data.portal)
     return {"ok": True}          # luôn trả giống nhau
 
 
 @api.post("/auth/verify-link", auth=None)
 def verify_link(request, data: TokenIn):
     lt = acc.find_by_token(data.token)
-    if lt and acc.consume(lt):
+    # Kiểm tra vai trò TRƯỚC khi dùng token
+    if lt and acc.can_use_portal(lt.user, data.portal) and acc.consume(lt):
         login(request, lt.user)
-        return {"ok": True}
+        return {"ok": True, "next": acc.landing(data.portal)}
     raise HttpError(400, "Liên kết không hợp lệ hoặc đã hết hạn")
 
 
 @api.post("/auth/verify-code", auth=None)
 def verify_code(request, data: CodeIn):
     user = User.objects.filter(email__iexact=data.email, is_active=True).first()
-    lt = acc.check_code(user, data.code.strip()) if user else None
+    if not user or not acc.can_use_portal(user, data.portal):
+        raise HttpError(400, "Mã không đúng hoặc đã hết hạn")
+    lt = acc.check_code(user, data.code.strip())
     if lt and acc.consume(lt):
         login(request, lt.user)
-        return {"ok": True}
+        return {"ok": True, "next": acc.landing(data.portal)}
     raise HttpError(400, "Mã không đúng hoặc đã hết hạn")
 
 
@@ -122,41 +122,12 @@ def my_invoices(request):
                                          i.amount, u.transfer_code) if i.status == "pending" else None,
         })
     return {"invoices": out,
-            "bank": {"account_no": settings.BANK_ACCOUNT_NO, "account_name": settings.BANK_ACCOUNT_NAME},
-            "summary": fund_summary()}
+            "bank": {"account_no": settings.BANK_ACCOUNT_NO, "account_name": settings.BANK_ACCOUNT_NAME}}
 
 
-# ---------- Thủ quỹ: kỳ thu ----------
-@api.get("/treasurer/periods")
-def periods_list(request):
-    need_treasurer(request)
-    qs = FeePeriod.objects.annotate(
-        total=Count("invoices"),
-        paid=Count("invoices", filter=Q(invoices__status=Invoice.Status.PAID)),
-    ).order_by("-due_date")
-    return {"periods": [{"id": p.id, "name": p.name, "amount": p.amount, "due_date": p.due_date,
-                         "total": p.total, "paid": p.paid} for p in qs],
-            "summary": fund_summary()}
 
 
-@api.post("/treasurer/periods")
-def periods_create(request, data: PeriodIn):
-    need_treasurer(request)
-    if data.amount <= 0:
-        raise HttpError(400, "Số tiền phải lớn hơn 0")
-    p = create_period(data.name, data.amount, data.due_date)
-    audit(request.user, "period.create", f"period={p.pk}")
-    return {"id": p.id}
 
-
-@api.get("/treasurer/periods/{period_id}")
-def period_detail(request, period_id: int):
-    need_treasurer(request)
-    p = get_object_or_404(FeePeriod, pk=period_id)
-    invs = p.invoices.select_related("member").order_by("status", "member__full_name")
-    return {"id": p.id, "name": p.name, "amount": p.amount, "due_date": p.due_date,
-            "invoices": [{"id": i.id, "member": i.member.full_name, "status": i.status,
-                          "paid_at": i.paid_at} for i in invs]}
 
 
 @api.get("/treasurer/periods/{period_id}/csv")
@@ -175,55 +146,8 @@ def period_csv(request, period_id: int):
 
 
 # ---------- Thủ quỹ: giao dịch ----------
-@api.get("/treasurer/transactions")
-def tx_list(request):
-    need_treasurer(request)
-    txs = BankTransaction.objects.filter(status__in=OPEN).select_related("member")
-    pending = Invoice.objects.filter(status=Invoice.Status.PENDING).select_related("member", "period")
-    return {
-        "transactions": [{"id": t.id, "amount": t.amount, "content": t.content,
-                          "occurred_at": t.occurred_at, "source": t.source, "note": t.note,
-                          "member": t.member.full_name if t.member else None} for t in txs],
-        "pending_invoices": [{"id": i.id, "member": i.member.full_name,
-                              "period": i.period.name, "amount": i.amount} for i in pending],
-    }
 
 
-@api.post("/treasurer/transactions/{tx_id}/assign")
-def tx_assign(request, tx_id: int, data: AssignIn):
-    need_treasurer(request)
-    with transaction.atomic():
-        tx = get_object_or_404(BankTransaction.objects.select_for_update(), pk=tx_id, status__in=OPEN)
-        inv = get_object_or_404(Invoice.objects.select_for_update(),
-                                pk=data.invoice_id, status=Invoice.Status.PENDING)
-        if tx.amount < inv.amount:
-            raise HttpError(400, "Giao dịch ít hơn số tiền hóa đơn")
-        note = "Thừa tiền, cần hoàn/ghi nhận" if tx.amount > inv.amount else ""
-        pay.mark_paid(inv, tx, actor=request.user, note=note)
-    return {"ok": True}
-
-
-@api.post("/treasurer/transactions/{tx_id}/ignore")
-def tx_ignore(request, tx_id: int):
-    need_treasurer(request)
-    tx = get_object_or_404(BankTransaction, pk=tx_id)
-    tx.status = BankTransaction.Status.IGNORED
-    tx.save(update_fields=["status"])
-    audit(request.user, "tx.ignore", f"tx={tx.pk}")
-    return {"ok": True}
-
-
-@api.post("/treasurer/invoices/{inv_id}/cash")
-def invoice_cash(request, inv_id: int):
-    need_treasurer(request)
-    with transaction.atomic():
-        inv = get_object_or_404(Invoice.objects.select_for_update(),
-                                pk=inv_id, status=Invoice.Status.PENDING)
-        tx = BankTransaction.objects.create(
-            dedupe_key=f"cash-{inv.pk}", amount=inv.amount, content="Tiền mặt",
-            occurred_at=timezone.now(), source=BankTransaction.Source.MANUAL)
-        pay.mark_paid(inv, tx, actor=request.user, note="Tiền mặt")
-    return {"ok": True}
 
 
 @api.post("/treasurer/statements")
@@ -255,3 +179,10 @@ def expenses_create(request, data: ExpenseIn):
 
 from .treasurer import router as treasurer_router
 api.add_router("/treasurer", treasurer_router)
+
+from .casso import router as casso_router
+api.add_router("/webhooks", casso_router)
+
+from .extra import router as extra_router, public_router
+api.add_router("/treasurer", extra_router)
+api.add_router("/auth", public_router)

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BankTransaction
+from .models import BankOutflow, BankTransaction
 
 
 @admin.register(BankTransaction)
@@ -10,3 +10,8 @@ class BankTransactionAdmin(admin.ModelAdmin):
     readonly_fields = [f.name for f in BankTransaction._meta.fields]
     def has_add_permission(self, request): return False
     def has_delete_permission(self, request, obj=None): return False
+
+@admin.register(BankOutflow)
+class BankOutflowAdmin(admin.ModelAdmin):
+    list_display = ("occurred_at", "amount", "counterparty", "content", "note")
+    search_fields = ("content", "counterparty", "note")

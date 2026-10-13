@@ -8,6 +8,7 @@ class BankTransaction(models.Model):
         EMAIL = "email", "Email biến động"
         STATEMENT = "statement", "Sao kê"
         MANUAL = "manual", "Thủ công / tiền mặt"
+        CASSO = "casso", "Casso"
 
     class Status(models.TextChoices):
         MATCHED = "matched", "Đã khớp"
@@ -33,3 +34,19 @@ class BankTransaction(models.Model):
     class Meta:
         constraints = [models.CheckConstraint(condition=Q(amount__gt=0), name="tx_amount_gt_0")]
         ordering = ["-occurred_at"]
+
+
+class BankOutflow(models.Model):
+    """Giao dịch tiền RA khỏi tài khoản ngân hàng của quỹ (do Casso gửi về)."""
+    dedupe_key = models.CharField(max_length=64, unique=True)
+    amount = models.PositiveBigIntegerField()
+    content = models.CharField(max_length=500, blank=True)
+    counterparty = models.CharField("Người nhận", max_length=255, blank=True)
+    occurred_at = models.DateTimeField()
+    note = models.CharField("Ghi chú", max_length=500, blank=True)
+    raw = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-occurred_at", "-id"]
+        constraints = [models.CheckConstraint(condition=Q(amount__gt=0), name="outflow_amount_gt_0")]

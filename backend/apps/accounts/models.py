@@ -74,3 +74,27 @@ class LoginToken(models.Model):
     expires_at = models.DateTimeField()
     used_at = models.DateTimeField(null=True, blank=True)
     attempts = models.PositiveSmallIntegerField(default=0)
+
+class RegistrationRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Chờ duyệt"
+        APPROVED = "approved", "Đã duyệt"
+        REJECTED = "rejected", "Từ chối"
+
+    email = models.EmailField()
+    full_name = models.CharField(max_length=120)
+    note = models.CharField(max_length=300, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            # Mỗi email chỉ có 1 đơn đang chờ duyệt
+            models.UniqueConstraint(
+                fields=["email"], condition=models.Q(status="pending"),
+                name="one_pending_request_per_email",
+            ),
+        ]

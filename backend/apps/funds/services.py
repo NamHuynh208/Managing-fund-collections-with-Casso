@@ -6,10 +6,14 @@ from .models import Expense, FeePeriod, Invoice
 
 
 @transaction.atomic
-def create_period(name, amount, due_date):
+def create_period(name, amount, due_date, member_ids=None):
+    """member_ids=None: tạo hóa đơn cho mọi thành viên đang hoạt động."""
     period = FeePeriod.objects.create(name=name, amount=amount, due_date=due_date)
+    members = User.objects.filter(is_active=True)
+    if member_ids is not None:
+        members = members.filter(pk__in=member_ids)
     Invoice.objects.bulk_create(
-        Invoice(member=m, period=period, amount=amount) for m in User.objects.filter(is_active=True)
+        Invoice(member=m, period=period, amount=amount) for m in members
     )
     return period
 

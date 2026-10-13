@@ -12,6 +12,9 @@ import TreasurerGuard from "./components/TreasurerGuard";
 import Periods from "./pages/treasurer/Periods";
 import PeriodDetail from "./pages/treasurer/PeriodDetail";
 import Transactions from "./pages/treasurer/Transactions";
+import Register from "./pages/Register";
+import Registrations from "./pages/treasurer/Registrations";
+import Outflows from "./pages/treasurer/Outflows";
 const qc = new QueryClient();
 
 function Guard({ children, treasurer = false }: { children: React.ReactNode; treasurer?: boolean }) {
@@ -27,9 +30,12 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/auth/verify" element={<Verify />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/" element={<Guard><Home /></Guard>} />
       {/* Trang thủ quỹ thêm ở đây, bọc <Guard treasurer> */}
       <Route element={<TreasurerGuard />}>
+      <Route path="/thu-quy/dang-ky" element={<Registrations />} />
+<Route path="/thu-quy/chuyen-di" element={<Outflows />} />
       <Route path="/thu-quy" element={<Periods />} />
       <Route path="/thu-quy/ky/:id" element={<PeriodDetail />} />
       <Route path="/thu-quy/giao-dich" element={<Transactions />} />

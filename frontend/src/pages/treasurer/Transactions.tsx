@@ -45,8 +45,7 @@ function TxCard({ tx, pending, onDone }: { tx: Tx; pending: Pending[]; onDone: (
         </select>
         <button disabled={!invoice || assign.isPending} onClick={() => assign.mutate()}
                 className="border rounded px-3">Gán</button>
-        <button className="underline"
-                onClick={() => confirm("Bỏ qua giao dịch này?") && ignore.mutate()}>Bỏ qua</button>
+        <button className="underline" disabled={ignore.isPending} onClick={() => ignore.mutate()}>Bỏ qua</button>
       </div>
       {assign.error && <p className="text-red-600">{assign.error.message}</p>}
     </div>

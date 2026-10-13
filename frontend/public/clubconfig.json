@@ -1,7 +1,7 @@
 {
   "name": "Quỹ CLB Cờ vua HCMUS",
   "logo": "/logo.svg",
-  "primaryColor": "#2457d6",
+  "primaryColor": "#000000",
   "radius": "0.75rem",
   "texts": {
     "loginTitle": "Đăng nhập",

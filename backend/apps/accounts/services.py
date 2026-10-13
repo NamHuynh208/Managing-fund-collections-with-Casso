@@ -5,8 +5,10 @@ from django.core.cache import cache
 from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils import timezone
+from django.db import transaction
 from .models import LoginToken, User
 
+LOGIN_COOLDOWN_SECONDS = 60
 log = logging.getLogger(__name__)
 
 
@@ -28,21 +30,37 @@ def hit_limit(key: str, limit: int, window: int) -> bool:
         return False
 
 
-def issue_login(email: str, request) -> None:
+def issue_login(email: str, request, portal: str = "member") -> None:
     user = User.objects.filter(email__iexact=email.strip(), is_active=True).first()
-    if not user:
-        return  # không báo cho người ngoài biết email có trong danh sách hay không
-    since = timezone.now() - timedelta(minutes=10)
-    if LoginToken.objects.filter(user=user, created_at__gte=since).count() >= 3:
-        return
+    if not user or not can_use_portal(user, portal):
+        return  # không báo cho người ngoài biết lý do
+
+    now = timezone.now()
     token = secrets.token_urlsafe(32)
     code = f"{secrets.randbelow(10**6):06d}"
     ttl = settings.MAGIC_LINK_TTL_MINUTES
-    LoginToken.objects.create(
-        user=user, token_hash=_h(token), code_hash=_h(code),
-        expires_at=timezone.now() + timedelta(minutes=ttl),
-    )
-    link = f"{settings.FRONTEND_URL}/auth/verify?token={token}"
+
+    with transaction.atomic():
+        # Khóa dòng của người dùng: hai request cùng lúc sẽ phải xếp hàng
+        User.objects.select_for_update().get(pk=user.pk)
+
+        # Vừa gửi trong 60 giây qua: bỏ qua, mã trước đó vẫn còn dùng được
+        if LoginToken.objects.filter(
+            user=user, created_at__gte=now - timedelta(seconds=LOGIN_COOLDOWN_SECONDS)
+        ).exists():
+            return
+        # Giới hạn 3 lần trong 10 phút
+        if LoginToken.objects.filter(
+            user=user, created_at__gte=now - timedelta(minutes=10)
+        ).count() >= 3:
+            return
+
+        LoginToken.objects.create(
+            user=user, token_hash=_h(token), code_hash=_h(code),
+            expires_at=now + timedelta(minutes=ttl),
+        )
+
+    link = f"{settings.FRONTEND_URL}/auth/verify?token={token}&portal={portal}"
     body = (
         f"Chào {user.full_name},\n\n"
         f"Bấm vào liên kết để đăng nhập (hiệu lực {ttl} phút, dùng một lần):\n{link}\n\n"
@@ -81,3 +99,23 @@ def consume(lt: LoginToken) -> bool:
     if ok:
         LoginToken.objects.filter(user=lt.user, used_at__isnull=True).update(used_at=timezone.now())
     return ok
+
+
+
+
+PORTALS = ("member", "treasurer", "admin")
+
+
+def can_use_portal(user, portal: str) -> bool:
+    """Người này có đủ vai trò để đăng nhập vào cổng đã chọn không."""
+    if portal == "member":
+        return True
+    if portal == "treasurer":
+        return user.is_treasurer
+    if portal == "admin":
+        return user.is_staff
+    return False
+
+
+def landing(portal: str) -> str:
+    return {"member": "/", "treasurer": "/thu-quy", "admin": "/admin/"}.get(portal, "/")

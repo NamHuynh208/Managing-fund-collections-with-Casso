@@ -16,7 +16,8 @@ services:
       retries: 10
 
   backend:
-    build: ./backend
+    image: quy-prod-backend:local
+    build: .
     restart: unless-stopped
     env_file: .env.prod
     depends_on:
@@ -34,7 +35,7 @@ services:
       - backend
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./frontend/dist:/srv:ro
+      - ../frontend/dist:/srv:ro
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -43,6 +44,5 @@ services:
     env_file: .env.prod
     depends_on:
       - caddy
-
 volumes:
   pgdata:
