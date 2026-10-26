@@ -1,49 +1,52 @@
 @import "tailwindcss";
 
-
+/* ============================================================
+   HỆ THỐNG THIẾT KẾ — phong cách phẳng, sắc cạnh (không bo
+   góc, không gradient), tông xanh lá. Đổi màu tại clubconfig.json.
+   ============================================================ */
 
 :root {
-  /* Colors: nền trắng, chữ đen */
-  --text: #000000;
-  --text-h: #000000;
-  --bg: #ffffff;
+  /* Thang xanh lá */
+  --brand-50: #eef7f1;
+  --brand-100: #d8efe0;
+  --brand-200: #b3e0c4;
+  --brand-400: #4c9e70;
+  --brand-600: #1c7a4c;
+  --brand-700: #14663f;
+  --brand-800: #0d5032;
+  --brand-900: #093d27;
+
+  /* Trung tính */
+  --bg: #f2f5f3;
   --card: #ffffff;
-  --border: #d4d4d4;
+  --border: #d7e0d9;
+  --border-strong: #0d5032;
+  --text: #182620;
+  --muted: #5d7064;
 
-  /* App theme */
-  --primary: #000000;
-  --radius: 0.75rem;
+  /* Trạng thái (màu phẳng, không gradient) */
+  --ok-fg: #0d5032;
+  --ok-bg: #d8efe0;
+  --warn-fg: #7a4d05;
+  --warn-bg: #fdeecb;
+  --bad-fg: #8c1d1d;
+  --bad-bg: #fbe3e3;
+  --mute-fg: #4b5b50;
+  --mute-bg: #e4eae6;
 
-  /* Other */
-  --code-bg: #f4f4f4;
-  --shadow: none;
-
-  /* Fonts */
-  --sans: system-ui, "Segoe UI", Roboto, serif;
-  --heading: system-ui, "Segoe UI", Roboto, serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  /* Base */
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --sans: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
-@media (max-width: 1024px) {
-  :root {
-    font-size: 16px;
-  }
+/* Ghi đè nếu clubconfig.json khai báo primaryColor */
+:root[data-brand="custom"] {
+  --brand-600: var(--cfg-primary, #1c7a4c);
+  --brand-700: var(--cfg-primary, #14663f);
 }
 
-/* Global */
 * {
   box-sizing: border-box;
+  border-radius: 0 !important; /* toàn hệ thống: không bo góc */
 }
 
 html {
@@ -52,93 +55,97 @@ html {
 
 body {
   margin: 0;
-  min-width: 320px;
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-}
-
-/* React root */
-#root {
-  width: 1126px;
-  max-width: 100%;
-  min-height: 100svh;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-}
-
-@media (max-width: 768px) {
-  #root {
-    width: 100%;
-    border-inline: none;
-  }
-}
-
-/* Headings */
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-}
-
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-}
-
-@media (max-width: 1024px) {
-  h1 {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-  h2 {
-    font-size: 20px;
-  }
-}
-
-p {
-  margin: 0;
-}
-
-/* Links: đen, gạch chân để vẫn nhận ra là liên kết */
-a {
-  color: var(--primary);
-  text-decoration: underline;
-}
-
-code {
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  border-radius: 4px;
-  color: var(--text-h);
-  background: var(--code-bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Cards */
-.card {
+/* ---------- Typography ---------- */
+h1, h2, h3 {
+  margin: 0;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.label-caps {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+code, .mono {
+  font-family: var(--mono);
+}
+
+a {
+  color: var(--brand-700);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+a:hover { color: var(--brand-900); }
+
+/* ---------- Form ---------- */
+input, select, textarea, button {
+  font: inherit;
+  color: inherit;
+}
+
+input, select, textarea {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  padding: 9px 11px;
+  width: 100%;
+  outline: none;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  border-color: var(--brand-600);
+  box-shadow: inset 0 0 0 1px var(--brand-600);
+}
+input::placeholder { color: #93a59a; }
+
+/* ---------- Bảng ---------- */
+table.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+}
+table.tbl th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--brand-900);
+  white-space: nowrap;
+}
+table.tbl td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+table.tbl tbody tr:hover { background: var(--brand-50); }
+
+/* Focus rõ ràng khi dùng bàn phím */
+:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 1px;
 }
 
-button,
-input,
-textarea,
-select {
-  font-family: inherit;
-}
+/* Scrollbar gọn */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #c3cfc7; border: 2px solid var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }

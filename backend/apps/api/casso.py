@@ -65,10 +65,6 @@ def casso_webhook(request):
         raise HttpError(400, "Dữ liệu không hợp lệ")
 
     # 1) Xác thực chữ ký (Webhook V2)
-    # sig = request.headers.get("X-Casso-Signature", "")
-    # if not sig or not _verify_v2(sig, payload, key):
-    #     raise HttpError(401, "Unauthorized")
-    
     sig = request.headers.get("X-Casso-Signature", "")
     if not sig or not _verify_v2(sig, payload, key):
         log.warning("Casso 401: sig=%r body=%r", sig[:40], request.body[:600])

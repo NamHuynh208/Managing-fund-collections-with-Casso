@@ -2,12 +2,14 @@
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # Dữ liệu và bản sao lưu (chứa dữ liệu thành viên và tiền)
 backups/
 *.dump
 *.sql.gz
 db.sqlite3
+quy-clb-*.zip
 
 # Python
 __pycache__/

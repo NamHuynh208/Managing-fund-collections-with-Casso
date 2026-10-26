@@ -16,7 +16,7 @@ from ninja.security import SessionAuth
 from apps.accounts import services as acc
 from apps.accounts.models import RegistrationRequest, User
 from apps.funds.audit import log as audit
-from apps.funds.models import FeePeriod, Invoice
+from apps.funds.models import Expense, FeePeriod, Invoice
 from apps.payments.models import BankOutflow
 
 log = logging.getLogger(__name__)
@@ -47,6 +47,10 @@ class PeriodUpdateIn(Schema):
 
 class NoteIn(Schema):
     note: str = ""
+
+class MemberUpdateIn(Schema):
+    role: str | None = None          # "member" | "treasurer"
+    is_active: bool | None = None
 
 
 # ---------- Công khai: đăng ký thành viên ----------
@@ -189,3 +193,47 @@ def outflow_note(request, oid: int, data: NoteIn):
     o.save(update_fields=["note"])
     audit(request.user, "outflow.note", f"outflow={o.pk}")
     return {"ok": True}
+
+
+# ---------- Thủ quỹ: quản lý thành viên ----------
+@router.post("/members/{uid}/update")
+def member_update(request, uid: int, data: MemberUpdateIn):
+    """Đổi vai trò hoặc khóa/mở tài khoản. Không được tự sửa tài khoản của chính mình."""
+    if uid == request.user.pk:
+        raise HttpError(400, "Không thể sửa tài khoản của chính bạn.")
+    u = get_object_or_404(User, pk=uid)
+    changed = []
+    if data.role is not None:
+        if data.role not in User.Role.values:
+            raise HttpError(400, "Vai trò không hợp lệ.")
+        u.role = data.role
+        changed.append(f"role={data.role}")
+    if data.is_active is not None:
+        u.is_active = data.is_active
+        changed.append(f"active={data.is_active}")
+    u.save()
+    audit(request.user, "member.update", f"user={u.pk} " + " ".join(changed))
+    return {"ok": True, "changed": changed}
+
+
+# ---------- Thủ quỹ: xóa khoản chi ----------
+@router.post("/expenses/{eid}/delete")
+def expense_delete(request, eid: int):
+    e = get_object_or_404(Expense, pk=eid)
+    label = f"{e.pk} amount={e.amount}"
+    e.delete()
+    audit(request.user, "expense.delete", label)
+    return {"ok": True}
+
+
+# ---------- Thủ quỹ: nhật ký thao tác ----------
+@router.get("/audit")
+def audit_list(request, limit: int = 200):
+    from apps.funds.models import AuditLog
+    qs = (AuditLog.objects.select_related("user")
+          .order_by("-created_at")[: max(1, min(limit, 500))])
+    return {"items": [{
+        "id": a.id, "action": a.action, "detail": a.detail,
+        "user": a.user.full_name if a.user else "(hệ thống)",
+        "created_at": a.created_at,
+    } for a in qs]}

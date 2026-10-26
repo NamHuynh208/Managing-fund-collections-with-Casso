@@ -1,13 +1,33 @@
 export type ClubConfig = {
-  name: string; logo: string; primaryColor: string; radius: string;
-  texts: Record<string, string>;
+  name: string;
+  shortName?: string;
+  logo?: string;
+  primaryColor?: string;
+  texts?: Record<string, string>;
 };
 
+const FALLBACK: ClubConfig = { name: "Quỹ CLB" };
+
+let cfg: ClubConfig = FALLBACK;
+
+export function getConfig(): ClubConfig {
+  return cfg;
+}
+
 export async function loadConfig(): Promise<ClubConfig> {
-  const cfg: ClubConfig = await (await fetch("/club.config.json")).json();
+  try {
+    const res = await fetch("/clubconfig.json");
+    if (res.ok) {
+      cfg = { ...FALLBACK, ...(await res.json()) };
+    }
+  } catch {
+    // thiếu file thì dùng mặc định, không chặn ứng dụng
+  }
   const root = document.documentElement;
-  root.style.setProperty("--primary", cfg.primaryColor);
-  root.style.setProperty("--radius", cfg.radius);
+  if (cfg.primaryColor) {
+    root.style.setProperty("--cfg-primary", cfg.primaryColor);
+    root.setAttribute("data-brand", "custom");
+  }
   document.title = cfg.name;
   return cfg;
 }

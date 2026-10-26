@@ -21,33 +21,38 @@ export default function MemberPicker({ members, value, onChange }: Props) {
 
   return (
     <div className="space-y-2">
-      <input
-        className="w-full border rounded p-2"
-        placeholder="Tìm theo tên hoặc email"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-      />
-      <div className="flex gap-3 text-sm flex-wrap">
-        <button type="button" className="underline"
-          onClick={() => onChange(Array.from(new Set([...value, ...shown.map((m) => m.id)])))}>
+      <input placeholder="Tìm theo tên hoặc email" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="flex flex-wrap gap-3 text-sm">
+        <button
+          type="button"
+          className="underline"
+          onClick={() => onChange(Array.from(new Set([...value, ...shown.map((m) => m.id)])))}
+        >
           Chọn tất cả đang hiển thị
         </button>
         <button type="button" className="underline" onClick={() => onChange([])}>
           Bỏ chọn hết
         </button>
-        <span className="ml-auto">Đã chọn {value.length}/{members.length}</span>
+        <span className="ml-auto text-[var(--muted)]">
+          Đã chọn {value.length}/{members.length}
+        </span>
       </div>
-      <div className="max-h-64 overflow-y-auto border rounded divide-y">
+      <div className="max-h-64 divide-y divide-[var(--border)] overflow-y-auto border border-[var(--border)] bg-white">
         {shown.map((m) => (
-          <label key={m.id} className="flex items-center gap-3 p-2 cursor-pointer">
-            <input type="checkbox" checked={selected.has(m.id)} onChange={() => toggle(m.id)} />
+          <label key={m.id} className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-[var(--brand-50)]">
+            <input
+              type="checkbox"
+              className="w-auto"
+              checked={selected.has(m.id)}
+              onChange={() => toggle(m.id)}
+            />
             <span>
               {m.full_name}
-              <small className="block opacity-70">{m.email}</small>
+              <small className="block text-xs text-[var(--muted)]">{m.email}</small>
             </span>
           </label>
         ))}
-        {shown.length === 0 && <p className="p-2">Không có thành viên nào.</p>}
+        {shown.length === 0 && <p className="px-3 py-3 text-sm text-[var(--muted)]">Không có thành viên nào.</p>}
       </div>
     </div>
   );

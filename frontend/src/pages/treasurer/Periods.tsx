@@ -2,36 +2,27 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import MemberPicker from "../../components/MemberPicker";
+
+type Member = { id: number; full_name: string; email: string; is_active?: boolean };
+import { Button, Card, CardHeader, Empty, ErrorText, Field, Input, PageHeader, Spinner } from "../../components/ui";
 import { vnd } from "../../lib/format";
-import MemberPicker, { type Member } from "../../components/MemberPicker";
 
 type Period = { id: number; name: string; amount: number; due_date: string; total: number; paid: number };
 
 export default function Periods() {
   const qc = useQueryClient();
-
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery<{ periods: Period[] }>({
     queryKey: ["periods"],
-    queryFn: () =>
-      api<{ periods: Period[]; summary: { collected: number; spent: number; balance: number } }>(
-        "/treasurer/periods"
-      ),
+    queryFn: () => api("/treasurer/periods"),
   });
-  const { data: mem } = useQuery({
+  const { data: mem } = useQuery<{ members: Member[] }>({
     queryKey: ["members"],
-    queryFn: () => api<{ members: Member[] }>("/treasurer/members"),
-  });
-  // Số giao dịch cần xử lý (trước đây luôn bằng 0 vì chưa được lấy từ API)
-const { data: ovData } = useQuery({
-  queryKey: ["overview"],
-  queryFn: () => api<{ review_count: number }>("/treasurer/overview"),
+    queryFn: () => api("/treasurer/members"),
   });
 
   const periods = data?.periods ?? [];
-  const members = mem?.members ?? [];
-  const ov = data?.summary
-  ? { ...data.summary, review_count: ovData?.review_count ?? 0 }
-  : undefined;
+  const members = (mem?.members ?? []).filter((m) => m.is_active !== false);
 
   const empty = { name: "", amount: "", due_date: "" };
   const [form, setForm] = useState(empty);
@@ -60,133 +51,138 @@ const { data: ovData } = useQuery({
   });
 
   return (
-    <div className="space-y-4">
-      {ov && (
-        <div className="border rounded p-3">
-          <b>Quỹ hiện có: {vnd(ov.balance)}</b>
-          <div className="text-sm opacity-70">
-            Đã thu {vnd(ov.collected)} · Đã chi {vnd(ov.spent)}
-          </div>
-          {ov.review_count > 0 && (
-            <Link to="/thu-quy/giao-dich" className="text-sm underline">
-              Có {ov.review_count} giao dịch cần xử lý
-            </Link>
+    <div>
+      <PageHeader title="Kỳ thu" sub="Tạo đợt thu quỹ và theo dõi tiến độ từng kỳ." />
+
+      <div className="grid gap-4 lg:grid-cols-[2fr_3fr]">
+        <Card>
+          <CardHeader title="Tạo kỳ thu mới" sub="Hệ thống sinh hóa đơn cho từng thành viên được chọn." />
+          <form
+            className="space-y-4 px-5 py-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setErr("");
+              if (mode === "some" && selected.length === 0) {
+                setErr("Hãy chọn ít nhất một thành viên");
+                return;
+              }
+              create.mutate();
+            }}
+          >
+            <Field label="Tên kỳ thu">
+              <Input
+                required
+                placeholder="Ví dụ: Quỹ tháng 11"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </Field>
+            <Field label="Số tiền mỗi người (VND)">
+              <Input
+                required
+                type="number"
+                min={1000}
+                step={1000}
+                placeholder="50000"
+                className="num"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              />
+            </Field>
+            <Field label="Hạn đóng">
+              <Input
+                required
+                type="date"
+                value={form.due_date}
+                onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+              />
+            </Field>
+
+            <fieldset className="border border-[var(--border)] px-3 pb-3 pt-4">
+              <legend className="label-caps px-1">Áp dụng cho</legend>
+              <label className="flex cursor-pointer items-center gap-2 py-1 text-sm">
+                <input
+                  type="radio"
+                  name="memberMode"
+                  checked={mode === "all"}
+                  onChange={() => setMode("all")}
+                  className="w-auto"
+                />
+                Tất cả thành viên đang hoạt động ({members.length} người)
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 py-1 text-sm">
+                <input
+                  type="radio"
+                  name="memberMode"
+                  checked={mode === "some"}
+                  onChange={() => setMode("some")}
+                  className="w-auto"
+                />
+                Chọn từng thành viên
+              </label>
+              {mode === "some" && (
+                <div className="pt-3">
+                  <MemberPicker members={members} value={selected} onChange={setSelected} />
+                </div>
+              )}
+            </fieldset>
+
+            <ErrorText>{err || create.error?.message}</ErrorText>
+            <Button type="submit" disabled={create.isPending} className="w-full">
+              {create.isPending ? "Đang tạo…" : `Tạo kỳ thu${mode === "all" ? "" : ` cho ${selected.length} người`}`}
+            </Button>
+          </form>
+        </Card>
+
+        <div>
+          {isLoading ? (
+            <Spinner />
+          ) : periods.length === 0 ? (
+            <Empty>Chưa có kỳ thu nào. Tạo kỳ thu đầu tiên ở biểu mẫu bên trái.</Empty>
+          ) : (
+            <Card>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Kỳ thu</th>
+                    <th>Hạn</th>
+                    <th className="text-right">Mỗi người</th>
+                    <th className="text-center">Đã đóng</th>
+                    <th className="text-right">Tiến độ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {periods.map((p) => {
+                    const pct = p.total ? Math.round((p.paid / p.total) * 100) : 0;
+                    return (
+                      <tr key={p.id}>
+                        <td>
+                          <Link to={`/thu-quy/ky/${p.id}`} className="font-semibold">
+                            {p.name}
+                          </Link>
+                        </td>
+                        <td className="num whitespace-nowrap">{new Date(p.due_date).toLocaleDateString("vi-VN")}</td>
+                        <td className="num text-right">{vnd(p.amount)}</td>
+                        <td className="num text-center">
+                          {p.paid}/{p.total}
+                        </td>
+                        <td className="w-32">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 flex-1 border border-[var(--border)] bg-[var(--mute-bg)]">
+                              <div className="h-full bg-[var(--brand-700)]" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="num w-9 text-right text-xs font-bold">{pct}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Card>
           )}
         </div>
-      )}
-
-      <form
-  className="border rounded p-4 space-y-4"
-  onSubmit={(e) => {
-  e.preventDefault();
-  setErr("");
-  if (mode === "some" && selected.length === 0) {
-    setErr("Hãy chọn ít nhất một thành viên");
-    return;
-  }
-  create.mutate();
-}}
->
-  <h2 className="text-lg font-semibold">Tạo kỳ thu mới</h2>
-
-  <input
-    required
-    placeholder="Tên kỳ (ví dụ: Quỹ tháng 10)"
-    className="border rounded p-2 w-full"
-    value={form.name}
-    onChange={(e) =>
-      setForm({ ...form, name: e.target.value })
-    }
-  />
-
-  <input
-    required
-    type="number"
-    min={1000}
-    placeholder="Số tiền mỗi người (VND)"
-    className="border rounded p-2 w-full"
-    value={form.amount}
-    onChange={(e) =>
-      setForm({ ...form, amount: e.target.value })
-    }
-  />
-
-  <input
-    required
-    type="date"
-    className="border rounded p-2 w-full"
-    value={form.due_date}
-    onChange={(e) =>
-      setForm({ ...form, due_date: e.target.value })
-    }
-  />
-
-  <div className="border rounded p-3 space-y-3">
-    <h3 className="font-semibold">Áp dụng cho</h3>
-
-    <label className="flex items-center gap-2 cursor-pointer">
-      <input
-        type="radio"
-        name="memberMode"
-        checked={mode === "all"}
-        onChange={() => setMode("all")}
-      />
-      Tất cả thành viên ({members.length} người)
-    </label>
-
-    <label className="flex items-center gap-2 cursor-pointer">
-      <input
-        type="radio"
-        name="memberMode"
-        checked={mode === "some"}
-        onChange={() => setMode("some")}
-      />
-      Chọn thành viên
-    </label>
-
-    {mode === "some" && (
-      <div className="pt-2">
-        <p className="text-sm mb-2">
-          Danh sách thành viên: {members.length} người
-        </p>
-
-        <MemberPicker
-          members={members}
-          value={selected}
-          onChange={setSelected}
-        />
       </div>
-    )}
-  </div>
-
-  {(err || create.error) && (
-    <p className="text-red-600">
-      {err || create.error?.message}
-    </p>
-  )}
-
-  <button
-    type="submit"
-    disabled={create.isPending}
-    className="border rounded px-4 py-2"
-  >
-    {create.isPending ? "Đang tạo..." : "Tạo kỳ thu"}
-  </button>
-</form>
-
-      <table className="w-full text-left">
-        <thead><tr><th>Kỳ</th><th>Hạn</th><th>Số tiền</th><th>Đã đóng</th></tr></thead>
-        <tbody>
-          {periods.map((p) => (
-            <tr key={p.id} className="border-t">
-              <td><Link className="underline" to={`/thu-quy/ky/${p.id}`}>{p.name}</Link></td>
-              <td>{new Date(p.due_date).toLocaleDateString("vi-VN")}</td>
-              <td>{vnd(p.amount)}</td>
-              <td>{p.paid}/{p.total}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

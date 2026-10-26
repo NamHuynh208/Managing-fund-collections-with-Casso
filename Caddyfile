@@ -1,0 +1,37 @@
+# Caddy cho web quỹ CLB.
+#
+# Biến môi trường (đặt trong .env.prod):
+#   SITE_ADDRESS      - để trống: phục vụ HTTP thường (đằng sau Cloudflare Tunnel).
+#                       Đặt tên miền (vd quy.example.com) để Caddy tự xin chứng chỉ
+#                       Let's Encrypt và phục vụ HTTPS trực tiếp.
+#   X_FORWARDED_PROTO - "https" (mặc định, phù hợp tunnel/HTTPS). Đặt "http" khi
+#                       chạy thử prod thuần HTTP trong mạng nội bộ.
+
+{$SITE_ADDRESS::80} {
+	encode gzip zstd
+
+	# API Django, trang admin và file tĩnh -> backend
+	handle /api/* {
+		reverse_proxy backend:8000 {
+			header_up X-Forwarded-Proto {$X_FORWARDED_PROTO:https}
+		}
+	}
+	handle /admin/* {
+		reverse_proxy backend:8000 {
+			header_up X-Forwarded-Proto {$X_FORWARDED_PROTO:https}
+		}
+	}
+	handle /static/* {
+		reverse_proxy backend:8000
+	}
+	handle /health {
+		reverse_proxy backend:8000
+	}
+
+	# Mọi đường dẫn khác: SPA React (fallback về index.html)
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

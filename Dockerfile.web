@@ -1,0 +1,13 @@
+# Giai đoạn 1: build frontend (Vite + TypeScript)
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
+# Giai đoạn 2: Caddy phục vụ frontend + reverse proxy sang Django
+FROM caddy:2-alpine
+COPY --from=build /app/dist /srv
+COPY Caddyfile /etc/caddy/Caddyfile
+EXPOSE 80 443

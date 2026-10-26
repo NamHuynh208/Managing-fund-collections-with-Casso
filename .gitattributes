@@ -1,0 +1,6 @@
+# Script shell phai luon LF, neu khong Docker tren Windows se loi shebang
+*.sh text eol=lf
+# File cau hinh docker/caddy cung nen on dinh giua cac may
+Dockerfile* text eol=lf
+Caddyfile text eol=lf
+*.ps1 text eol=crlf
